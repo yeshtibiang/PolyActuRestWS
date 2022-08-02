@@ -5,7 +5,9 @@ import com.google.gson.Gson;
 import org.example.model.Article;
 
 import java.sql.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Date;
 
 public class ArticleService {
 
@@ -15,7 +17,6 @@ public class ArticleService {
             String jdbcUrl = "jdbc:mysql://localhost:3306/polyactu";
             String username = "root";
             String password = "root";
-
 
             Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
             return connection;
@@ -33,8 +34,14 @@ public class ArticleService {
         List<Article> articles = new ArrayList<Article>();
 
         while (rs.next()){
-            articles.add(new Article(rs.getInt(1), rs.getString(2), rs.getString(4), rs.getString(3)));
+            articles.add(new Article(rs.getInt(1), rs.getString(2), rs.getString(4), rs.getString(3), rs.getTimestamp("createdDate")));
         }
+        articles.sort(new Comparator<Article>() {
+            @Override
+            public int compare(Article o1, Article o2) {
+                return o2.getCreatedDate().compareTo(o1.getCreatedDate());
+            }
+        });
 
         return articles;
 
@@ -65,6 +72,7 @@ public class ArticleService {
                 returnValue.append("<title>").append(grpData.getString("title")).append("</title>");
                 returnValue.append("<content>").append(grpData.getString("content")).append("</content>");
                 returnValue.append("<category>").append(grpData.getString("category")).append("</category>");
+                returnValue.append("<createdDate>").append(grpData.getTimestamp("createdDate")).append("</createdDate>");
                 returnValue.append("</article>");
             }
             returnValue.append("</").append(grpRs.getString("category")).append(">");
@@ -81,7 +89,7 @@ public class ArticleService {
         // selectionne l'ensemble des groupes
         ResultSet grpRs = stmt.executeQuery("select distinct category from articles");
         // selectionne l'ensemble elements par groupes
-        PreparedStatement grpDataPs = conn.prepareStatement("select * from articles where category = ?");
+        PreparedStatement grpDataPs = conn.prepareStatement("select * from articles where category = ? order by createdDate desc");
         ResultSet grpData = null;
 
         //créer le list map
@@ -108,6 +116,7 @@ public class ArticleService {
                 categoryElt.put("title", grpData.getString("title"));
                 categoryElt.put("content", grpData.getString("content"));
                 categoryElt.put("category", grpData.getString("category"));
+                categoryElt.put("createdDate", grpData.getTimestamp("createdDate"));
 
                 categoryArticle.add(categoryElt);
             }
@@ -125,13 +134,20 @@ public class ArticleService {
     public List<Article> getArticlesByCategory(String catego) throws SQLException {
         Connection conn = dbConnect();
         Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery("select * from articles where category = '"+catego+"'");
+        ResultSet rs = stmt.executeQuery("select * from articles where category = '"+catego+"' order by createdDate");
 
         List<Article> articles = new ArrayList<Article>();
 
         while (rs.next()){
-            articles.add(new Article(rs.getInt(1), rs.getString(2), rs.getString(4), rs.getString(3)));
+            articles.add(new Article(rs.getInt(1), rs.getString(2), rs.getString(4), rs.getString(3), rs.getTimestamp("createdDate")));
         }
+        articles.sort(new Comparator<Article>() {
+            @Override
+            public int compare(Article o1, Article o2) {
+                return o2.getCreatedDate().compareTo(o1.getCreatedDate());
+            }
+        });
+        System.out.println(articles);
 
         return articles;
 
